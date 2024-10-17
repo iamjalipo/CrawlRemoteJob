@@ -15,7 +15,7 @@ def parse_job_listings():
 
     if response.status_code == 200:
         soup = BeautifulSoup(response.content, "html.parser")
-        job_cards = soup.find_all('div', class_='hxecsD')
+        job_cards = soup.find_all('div', class_='new-job-item__JobItemWrapper-sc-1qa4r36-0 hxecsD')
         jobs = []
 
         today = datetime.today().date() 
@@ -24,37 +24,30 @@ def parse_job_listings():
         print(f"**************today**************** {today}")
         print(f"**************yesterday**************** {yesterday}")
         print(f"**************two_days_ago**************** {two_days_ago}")
-        
-        for job in job_cards:
+        print("^^^^^^^^^^^^^^^^^^^^^^" , len(job_cards))
+        for job in job_cards[6:]:  
+            print("^^^^^^^^^^^^^^^^^^^^^^" , job)
+            posted_time = job.find('div', class_='dmIPAp')
+            if posted_time:
+                time_text = posted_time.text.strip()
 
-            parent_div = job.find_parent('div', class_='kGHzdd')
-            print("*******************" , parent_div)
-            if parent_div:
-                print("Job found inside div with class 'kGHzdd', skipping this job.")
-                continue  
-            else:
-                print(f"**************hiiiiiiii**************** ")
-                posted_time = job.find('div', class_='dmIPAp')
-                if posted_time:
-                    time_text = posted_time.text.strip()
+                # Parse the date string (assuming the format is like "24 Sep")
+                job_date = datetime.strptime(time_text, "%d %b").date() 
+                print(f"**************job_date**************** {job_date}")
 
-                    # Parse the date string (assuming the format is like "24 Sep")
-                    job_date = datetime.strptime(time_text, "%d %b").date() 
-                    print(f"**************job_date**************** {job_date}")
+                if job_date == yesterday:
+                    job_title = job.find('span', class_='font-weight-bold larger').text.strip()
+                    job_link = job.find('a')['href'] 
 
-                    if job_date == yesterday:
-                        job_title = job.find('span', class_='font-weight-bold larger').text.strip()
-                        job_link = job.find('a')['href'] 
+                    job_info = extract_job_details(job_link)
+                    jobs.append(job_info)
+                    print(f"Added job posted on {time_text}")
 
-                        job_info = extract_job_details(job_link)
-                        jobs.append(job_info)
-                        print(f"Added job posted on {time_text}")
+                elif job_date <= two_days_ago:
+                    print(f"Encountered a job posted on {time_text} (2 days ago), stopping the loop.")
+                    break
 
-                    elif job_date <= two_days_ago:
-                        print(f"Encountered a job posted on {time_text} (2 days ago), stopping the loop.")
-                        break
-
-                    time.sleep(1)
+                time.sleep(1)
         
         return jobs
     

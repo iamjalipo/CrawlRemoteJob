@@ -1,81 +1,104 @@
-import requests
+from selenium import webdriver
 from bs4 import BeautifulSoup
 import time
 from datetime import datetime, timedelta
 
-def get_page(url):
-    from requests.packages.urllib3.exceptions import InsecureRequestWarning
-    requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-    response = requests.get(url, verify=False)
-    return response
+def scroll_page(driver):
+    last_height = driver.execute_script("return document.body.scrollHeight")
+    
+    while True:
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        
+        time.sleep(2)  
+        
+        new_height = driver.execute_script("return document.body.scrollHeight")
+        if new_height == last_height:
+            break 
+        last_height = new_height
+
+def get_page_source(url):
+    driver = webdriver.Chrome()
+    driver.get(url)
+
+    scroll_page(driver)
+    
+    page_source = driver.page_source
+    driver.quit()  
+
+    return page_source
 
 def parse_job_listings():
     url = "https://justremote.co/remote-jobs"
-    response = get_page(url)
+    page_source = get_page_source(url)
+    
+    soup = BeautifulSoup(page_source, "html.parser")
+    job_cards = soup.find_all('div', class_='new-job-item__JobItemWrapper-sc-1qa4r36-0 hxecsD')
+    jobs = []
 
-    if response.status_code == 200:
-        soup = BeautifulSoup(response.content, "html.parser")
-        job_cards = soup.find_all('div', class_='new-job-item__JobItemWrapper-sc-1qa4r36-0 hxecsD')
-        jobs = []
+    today = datetime.today().date() 
+    yesterday = today - timedelta(days=1)
+    two_days_ago = today - timedelta(days=2)
 
-        today = datetime.today().date() 
-        yesterday = today - timedelta(days=1)
-        two_days_ago = today - timedelta(days=2)
-        print(f"**************today**************** {today}")
-        print(f"**************yesterday**************** {yesterday}")
-        print(f"**************two_days_ago**************** {two_days_ago}")
-        print("^^^^^^^^^^^^^^^^^^^^^^" , len(job_cards))
-        for job in job_cards[6:]:  
-            print("^^^^^^^^^^^^^^^^^^^^^^" , job)
-            posted_time = job.find('div', class_='dmIPAp')
-            if posted_time:
-                time_text = posted_time.text.strip()
 
-                # Parse the date string (assuming the format is like "24 Sep")
-                job_date = datetime.strptime(time_text, "%d %b").date() 
-                print(f"**************job_date**************** {job_date}")
+    for job in job_cards[6:]:
+        posted_time = job.find('div', class_='dmIPAp')
+        if posted_time:
+            time_text = posted_time.text.strip()
 
-                if job_date == yesterday:
-                    job_title = job.find('span', class_='font-weight-bold larger').text.strip()
+            try:
+                job_date = datetime.strptime(time_text, "%d %b").date()
+
+
+                if job_date:
+                    job_title = job.find('h3', class_='iNuReR').text.strip()
                     job_link = job.find('a')['href'] 
-
-                    job_info = extract_job_details(job_link)
-                    jobs.append(job_info)
-                    print(f"Added job posted on {time_text}")
+                    job_info = extract_job_details(f"https://justremote.co/{job_link}" , job_title)
+                    
+                    if job_info:
+                        jobs.append(job_info)
+                        print(f"Added job posted on {time_text}")
+                    else:
+                        print(f"Was not global")
 
                 elif job_date <= two_days_ago:
                     print(f"Encountered a job posted on {time_text} (2 days ago), stopping the loop.")
                     break
-
-                time.sleep(1)
+            except ValueError:
+                print(f"Error parsing date: {time_text}")
         
-        return jobs
+        time.sleep(1)
     
+    return jobs
+
+def extract_job_details(link , job_title):
+    
+    job_html = get_page_source(link)
+    job_soup = BeautifulSoup(job_html, 'html.parser')
+
+    try:
+        job_type = job_soup.find('div', class_='kDMjDa').find_next('span').text.strip()
+    except:
+        job_type = "globally!"
+
+    if job_type == "globally!":
+        title = job_title
+        company = job_soup.find('a', class_= 'jynOlu').text.strip() 
+        temp = job_soup.find('div', class_='kDMjDa').text.strip() 
+        workplace = (job_soup.find('div', class_='dqMVd').find_all('div'))[1].text.strip()
+        applylink = job_soup.find('div', class_='hdHXKa').find_next('a')['href']
+        job_dict = {
+            "Title": title, #Senior QA Engineer
+            "Company": company, #Super Dispatch
+            "Temp": temp, #permanent
+            "Type": job_type, #globally!
+            "Workplace": workplace, #Fully Remote
+            "Applylink" : applylink, #root_link
+            "Link": link #crawl-page-link
+        }
+        print("*&********************************" , job_dict)
+        return  job_dict
     else:
-        print(f"Failed to retrieve content. Status code: {response.status_code}")
-
-def extract_job_details(link):
-    job_html = get_page(link)
-    job_soup = BeautifulSoup(job_html.content, 'html.parser')
-
-    title = job_soup.find('h1').text.strip() 
-    location = job_soup.find('span', text='Location:').find_next('span').text.strip() 
-    benefits = job_soup.find('span', text='Benefits:').find_next('span').text.strip() 
-    job_type = job_soup.find('span', text='Type:').find_next('span').text.strip()
-    workplace = job_soup.find('span', text='Workplace:').find_next('span').text.strip() 
-    category = job_soup.find('span', text='Category:').find_next('span').text.strip() 
-    description = job_soup.find('div', class_='job-description').text.strip()  
-
-    return {
-        "Title": title,
-        "Location": location,
-        "Benefits": benefits,
-        "Type": job_type,
-        "Workplace": workplace,
-        "Category": category,
-        "Description": description,
-        "Link": link
-    }
+        pass
 
 if __name__ == "__main__":
     jobs = parse_job_listings()

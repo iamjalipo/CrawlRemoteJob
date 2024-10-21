@@ -81,13 +81,12 @@ def extract_job_details(link , job_title):
         job_type = "globally!"
 
     if job_type == "globally!":
-        title = job_title
         company = job_soup.find('a', class_= 'jynOlu').text.strip() 
         temp = job_soup.find('div', class_='kDMjDa').text.strip() 
         workplace = (job_soup.find('div', class_='dqMVd').find_all('div'))[1].text.strip()
         applylink = job_soup.find('div', class_='hdHXKa').find_next('a')['href']
         job_dict = {
-            "Title": title, #Senior QA Engineer
+            "Title": job_title, #Senior QA Engineer
             "Company": company, #Super Dispatch
             "Temp": temp, #permanent
             "Type": job_type, #globally!

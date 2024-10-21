@@ -44,9 +44,7 @@ def parse_job_listings():
             if time_text == "1 day ago":
                 
                 job_title = job.find('span', class_='fsvfbz').text.strip()
-                print("*******job_title*********" ,job_title )
                 job_link = job.find('a')['href']
-                print("*******job_link*********" ,job_link ) 
                 try:
                     price = job.find('span', class_='iviamx').text.strip()
                 except:

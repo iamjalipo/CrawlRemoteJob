@@ -49,7 +49,7 @@ def parse_job_listings():
                 job_date = datetime.strptime(time_text, "%d %b").date()
 
 
-                if job_date:
+                if job_date == yesterday:
                     job_title = job.find('h3', class_='iNuReR').text.strip()
                     job_link = job.find('a')['href'] 
                     job_info = extract_job_details(f"https://justremote.co/{job_link}" , job_title)
@@ -94,7 +94,6 @@ def extract_job_details(link , job_title):
             "Applylink" : applylink, #root_link
             "Link": link #crawl-page-link
         }
-        print("*&********************************" , job_dict)
         return  job_dict
     else:
         pass

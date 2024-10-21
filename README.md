@@ -32,27 +32,14 @@ pip install selenium beautifulsoup4
 ```
 
 ```bash
-python3 main.py --site justremote
+python main.py --site justremote
 ```
 
 To crawl jobs from **remote.com**:
 
 ```bash
-python3 main.py --site remote
+python main.py --site remote
 ```
 
-## How to Run Code Using run.sh
-
-If you want to run only the **justremote.com** crawler, use the following command:
-
-```bash
-./run.sh --site justremote
-```
-
-If you want to run the **remote.com** crawler, use the following command:
-
-```bash
-./run.sh --site remote
-```
 
 
